@@ -1,0 +1,52 @@
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "lib": [
+            "ESNext"
+        ],
+        "strict": false,
+        "skipLibCheck": true,
+        "outFile": "../main.js",
+        "newLine": "LF",
+        "experimentalDecorators": true
+    },
+    "include": [
+
+        "header.ts",
+
+        "api/ChickenItem.ts",
+        "api/ChickenStack.ts",
+        "api/ChickenRegistry.ts",
+        "api/ChickenRender.ts",
+        "api/WindowWithTooltips.ts",
+
+        "item/catcher.ts",
+        "item/chicken.ts",
+
+        "tile/roost/UiRoost.ts",
+        "tile/roost/TileRoost.ts",
+        "tile/roost/BlockRoost.ts",
+
+        "tile/breeder/UiBreeder.ts",
+        "tile/breeder/TileBreeder.ts",
+        "tile/breeder/BlockBreeder.ts",
+
+        "tile/collector/UiCollector.ts",
+        "tile/collector/TileCollector.ts",
+        "tile/collector/BlockCollector.ts",
+
+        "rv.ts",
+        "footer.ts"
+
+      ],
+    "files": [
+        "../../declarations/android-declarations.d.ts",
+        "../../declarations/android.d.ts",
+        "../../declarations/core-engine.d.ts",
+        "../../declarations/kex.d.ts",
+        "../../declarations/BlockEngine.d.ts",
+        "../../declarations/StorageInterface.d.ts",
+        "../../declarations/VanillaSlots.d.ts",
+        "../../declarations/EnhancedRecipes.d.ts"
+    ]
+}

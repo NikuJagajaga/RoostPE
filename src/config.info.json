@@ -1,0 +1,8 @@
+{
+    "properties": {
+        "enabled": {
+            "name": {"en": "Enable mod"},
+            "index": 0
+        }
+    }
+}
