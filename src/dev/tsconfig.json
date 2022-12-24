@@ -14,9 +14,8 @@
 
         "header.ts",
 
-        "api/ChickenItem.ts",
+        "api/ItemChicken.ts",
         "api/ChickenStack.ts",
-        "api/ChickenRegistry.ts",
         "api/ChickenRender.ts",
         "api/WindowWithTooltips.ts",
 
@@ -47,6 +46,7 @@
         "../../declarations/BlockEngine.d.ts",
         "../../declarations/StorageInterface.d.ts",
         "../../declarations/VanillaSlots.d.ts",
-        "../../declarations/EnhancedRecipes.d.ts"
+        "../../declarations/EnhancedRecipes.d.ts",
+        "../../declarations/RecipeViewer.d.ts"
     ]
 }

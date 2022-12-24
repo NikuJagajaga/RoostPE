@@ -44,10 +44,9 @@ namespace ChickenRender {
     });
 
     export const getRenderId = (rotation: number): number => {
-        if(rotation === 0 || rotation === 1 || rotation === 2 || rotation === 3){
+        if(rotation == 0 || rotation == 1 || rotation == 2 || rotation == 3){
             return renders[rotation].getId();
         }
-        alert(rotation);
         return -1;
     }
 

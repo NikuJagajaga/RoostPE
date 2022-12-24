@@ -10,9 +10,18 @@ class WindowWithTooltips {
     private static  FrameTex = UI.FrameTextureSource.get("workbench_frame3");
     private static  FrameTexCentralColor = this.FrameTex.getCentralColor();
 
+    private static createHighlightBmp (w: number, h: number): android.graphics.Bitmap  {
+        const bitmap = new android.graphics.Bitmap.createBitmap(w | 0, h | 0, android.graphics.Bitmap.Config.ARGB_8888);
+        const canvas = new android.graphics.Canvas(bitmap);
+        canvas.drawARGB(127, 255, 255, 255);
+        return bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true);
+    }
+
+    private content: UI.WindowContent;
     private winGroup: UI.WindowGroup;
     private winMain: UI.Window;
     private winOvl: UI.Window;
+    private isReady: boolean;
 
     constructor(content: UI.WindowContent){
 
@@ -46,8 +55,15 @@ class WindowWithTooltips {
             }
         };
 
+        this.content = content;
+        this.isReady = false;
+
+    }
+
+    create(): void {
+
         this.winGroup = new UI.WindowGroup();
-        this.winMain = new UI.Window(content);
+        this.winMain = new UI.Window(this.content);
 
         this.winOvl = new UI.Window({
             location: {x: 0, y: 0, width: 1000, height: UI.getScreenHeight()},
@@ -57,7 +73,6 @@ class WindowWithTooltips {
                 _wwtHighlight: {type: "image", x: -1000, y: -1000, z: -1, width: 64, height: 64, scale: 1, bitmap: "_selection"}
             }
         });
-
 
         this.winMain.setBackgroundColor(Color.TRANSPARENT);
         this.winOvl.setBackgroundColor(Color.TRANSPARENT);
@@ -72,20 +87,23 @@ class WindowWithTooltips {
 
         this.winGroup.setCloseOnBackPressed(true);
 
+        this.isReady = true;
+
+    }
+
+    setTooltipFunc(elemName: string, tooltipFunc: (elem: UI.Element) => string): void {
+        if(elemName in this.content.elements){
+            this.content.elements[elemName].onTouchEvent = (el, ev) => {
+                this.showTooltip(tooltipFunc(el), el, ev.x, ev.y, ev.type);
+            }
+        }
     }
 
     slotTooltip(slotElem: UI.Element): string {
-        if(slotElem.source.id !== 0){
-            return Item.getName(slotElem.source.id, slotElem.source.data);
+        if(slotElem.source.id != 0){
+            return Item.getName(slotElem.source.id, slotElem.source.data, slotElem.source.extra);
         }
         return "";
-    }
-
-    static createHighlightBmp (w: number, h: number): android.graphics.Bitmap  {
-        const bitmap = new android.graphics.Bitmap.createBitmap(w | 0, h | 0, android.graphics.Bitmap.Config.ARGB_8888);
-        const canvas = new android.graphics.Canvas(bitmap);
-        canvas.drawARGB(127, 255, 255, 255);
-        return bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true);
     }
 
     showTooltip(str: string, elem: UI.Element, eventX: number, eventY: number, eventType: UI.TouchEventType): void {
@@ -94,7 +112,7 @@ class WindowWithTooltips {
         const wwtText: UI.Element = ovlElems.get("_wwtText");
         const wwtFrame: UI.Element = ovlElems.get("_wwtFrame");
         const wwtHighlight: UI.Element = ovlElems.get("_wwtHighlight");
-        const MOVEtoLONG_CLICK = eventType == "LONG_CLICK" && wwtFrame.x !== -1000 && wwtFrame.y !== -1000;
+        const MOVEtoLONG_CLICK = eventType == "LONG_CLICK" && wwtFrame.x != -1000 && wwtFrame.y != -1000;
         let x = 0;
         let y = 0;
         let w = 0;
@@ -105,7 +123,7 @@ class WindowWithTooltips {
             y = location.y + location.windowToGlobal(elem.y) | 0;
             w = location.windowToGlobal(elem.elementRect.width()) | 0;
             h = location.windowToGlobal(elem.elementRect.height()) | 0;
-            if(wwtHighlight.elementRect.width() !== w || wwtHighlight.elementRect.height() !== h){
+            if(wwtHighlight.elementRect.width() != w || wwtHighlight.elementRect.height() != h){
                 wwtHighlight.texture = new UI.Texture(WindowWithTooltips.createHighlightBmp(w, h));
                 wwtHighlight.setSize(w, h);
             }
@@ -119,7 +137,7 @@ class WindowWithTooltips {
             if(y < -10){
                 y = location.y + location.windowToGlobal(eventY) + 70;
             }
-            if(wwtFrame.elementRect.width() !== w || wwtFrame.elementRect.height() !== h){
+            if(wwtFrame.elementRect.width() != w || wwtFrame.elementRect.height() != h){
                 wwtFrame.texture = new UI.Texture(WindowWithTooltips.FrameTex.expandAndScale(w, h, 1, WindowWithTooltips.FrameTexCentralColor));
                 wwtFrame.setSize(w, h);
             }
@@ -127,8 +145,8 @@ class WindowWithTooltips {
             wwtText.setBinding("text", str);
             wwtFrame.setPosition(Math_clamp(x - w / 2, 0, 1000 - w), y);
 
-            if(!Threading.getThread("wwt_showTooltips")){
-                Threading.initThread("wwt_showTooltips", () => {
+            if(!Threading.getThread("wwt_showTooltip")){
+                Threading.initThread("wwt_showTooltip", () => {
                     while(elem.isTouched){
                         java.lang.Thread.sleep(200);
                     }
@@ -147,6 +165,7 @@ class WindowWithTooltips {
     }
 
     getWindow(): UI.WindowGroup {
+        this.isReady || this.create();
         this.winGroup.moveOnTop("ovl");
         return this.winGroup;
     }

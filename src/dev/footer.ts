@@ -1,4 +1,4 @@
 ModAPI.registerAPI("RoostAPI", {
-    ChickenItem: ChickenItem,
-    ChickenRegistry: ChickenRegistry
+    ItemChicken: ItemChicken,
+    ItemCatcher: ItemCatcher
 });

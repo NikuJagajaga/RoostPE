@@ -28,7 +28,7 @@ class BlockRoost extends BlockBase {
                 model.addBox(...BlockModeler.getRotatedBoxVertexes(box.vartexes, i), textures[i]);
             });
             BlockRenderer.setStaticICRender(this.id, i + 2, new ICRender.Model(model));
-            if(i === 1){
+            if(i == 1){
                 BlockModeler.setInventoryModel(this.id, model);
             }
         }

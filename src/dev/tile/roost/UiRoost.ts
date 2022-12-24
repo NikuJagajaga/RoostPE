@@ -23,13 +23,13 @@ const UiRoost = new WindowWithTooltips({
     ],
 
     elements: {
-		buttonClose: {type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4},
-		barProgress: {type: "scale", x: 278, y: 116, bitmap: "roost.bar_roost", scale: 5.5},
-		slotChicken: {type: "slot", x: 150, y: 110, size: 100, bitmap: "roost.slot"},
-		slotOutput0: {type: "slot", x: 450, y: 110, size: 100},
-		slotOutput1: {type: "slot", x: 550, y: 110, size: 100},
-		slotOutput2: {type: "slot", x: 650, y: 110, size: 100},
-		slotOutput3: {type: "slot", x: 750, y: 110, size: 100},
+        buttonClose: {type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4},
+        barProgress: {type: "scale", x: 278, y: 116, bitmap: "roost.bar_roost", scale: 5.5},
+        slotChicken: {type: "slot", x: 150, y: 110, size: 100, bitmap: "roost.slot"},
+        slotOutput0: {type: "slot", x: 450, y: 110, size: 100},
+        slotOutput1: {type: "slot", x: 550, y: 110, size: 100},
+        slotOutput2: {type: "slot", x: 650, y: 110, size: 100},
+        slotOutput3: {type: "slot", x: 750, y: 110, size: 100},
         ...((): UI.ElementSet => {
             const elems: UI.ElementSet = {};
             let x = 0;
@@ -44,3 +44,6 @@ const UiRoost = new WindowWithTooltips({
     }
 
 });
+
+
+UiRoost.setTooltipFunc("barProgress", elem => (elem.getBinding("value") * 100).toFixed(1) + "%");
