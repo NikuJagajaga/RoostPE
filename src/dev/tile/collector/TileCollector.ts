@@ -1,0 +1,4 @@
+class TileCollector extends TileEntityBase {
+
+    
+}

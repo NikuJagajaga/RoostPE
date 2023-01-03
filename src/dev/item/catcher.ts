@@ -1,15 +1,5 @@
 class ItemCatcher extends ItemCommon implements ToolParams {
 
-    private static chickens: {[identifier: string]: ItemChicken} = {};
-
-    static registerChicken(identifier: string, chicken: ItemChicken): void {
-        this.chickens[identifier] = chicken;
-    }
-
-    static getChickenData(identifier: string): ItemChicken {
-        return this.chickens[identifier] || null;
-    }
-
     isWeapon: boolean;
 
     constructor(){
@@ -25,10 +15,7 @@ class ItemCatcher extends ItemCommon implements ToolParams {
     onAttack(item: ItemInstance, entity: number, player: number): boolean {
 
         const type = Entity.getTypeName(entity);
-
-        Game.message(type);
-
-        const chicken = ItemCatcher.getChickenData(type.split("<")[0]);
+        const chicken = ItemChicken.getChickenByIdentifier(type.split("<")[0]);
 
         if(chicken){
 
@@ -40,8 +27,8 @@ class ItemCatcher extends ItemCommon implements ToolParams {
                 .putInt("status_gain", 1)
                 .putInt("status_strength", 1);
 
-            Entity.addVelocity(World.drop(pos.x, pos.y, pos.z, chicken.id, 1, 0, extra), 0, 0.2, 0);
             Entity.remove(entity);
+            Entity.addVelocity(World.drop(pos.x, pos.y, pos.z, chicken.id, 1, 0, extra), 0, 0.2, 0);
 
             for(let i = 0; i < 20; i++){
                 Particles.addParticle(EParticleType.REDSTONE,
@@ -66,8 +53,4 @@ class ItemCatcher extends ItemCommon implements ToolParams {
 
 
 ItemRegistry.registerItem(new ItemCatcher());
-
-const vanilla = new ItemChicken("chicken_vanilla", "Vanilla Chicken", [VanillaItemID.feather, VanillaItemID.egg]);
-ItemRegistry.registerItem(vanilla);
-
-ItemCatcher.registerChicken("minecraft:chicken", vanilla);
+Recipes2.addShaped(ItemID.chicken_catcher, "a:b:c", {a: "egg", b: "stick", c: "feather"});

@@ -24,7 +24,11 @@ class TileBreeder extends TileEntityBase {
     }
 
     setupContainer(): void {
-
+        StorageInterface.setGlobalValidatePolicy(this.container, (name, id, amount, data) => {
+            if(name == "slotSeed") return TileBreeder.seeds[id];
+            if(name == "slotBase" || name == "slotMate") return ItemChicken.isChicken(id);
+            return false;
+        });
     }
 
     @BlockEngine.Decorators.ClientSide

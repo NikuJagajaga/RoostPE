@@ -21,7 +21,10 @@ class TileRoost extends TileEntityBase {
     }
 
     setupContainer(): void {
-
+        StorageInterface.setGlobalValidatePolicy(this.container, (name, id, amount, data) => {
+            if(name == "slotChicken") return ItemChicken.isChicken(id);
+            return false;
+        });
     }
 
     @BlockEngine.Decorators.ClientSide

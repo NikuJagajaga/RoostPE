@@ -1,7 +1,7 @@
 class ChickenStack extends ItemStack {
 
     static getChickenStack(item: ItemInstance): Nullable<ChickenStack> {
-        if(ItemChicken.isExists(item.id)){
+        if(ItemChicken.isChicken(item.id)){
             return new ChickenStack(item);
         }
         return null;

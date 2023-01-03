@@ -13,6 +13,15 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -30,15 +39,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 IMPORT("BlockEngine");
 IMPORT("StorageInterface");
 IMPORT("VanillaSlots");
@@ -49,16 +49,29 @@ var Math_randomInt = function (min, max) { return min + (Math.random() * (max - 
 var ItemChicken = /** @class */ (function (_super) {
     __extends(ItemChicken, _super);
     function ItemChicken(stringID, name, products) {
-        var _this = _super.call(this, stringID, name, stringID) || this;
+        var _this = _super.call(this, stringID, name, stringID, false) || this;
+        Item.addToCreative(_this.id, 1, 0, new ItemExtraData().putInt("status_growth", 1).putInt("status_gain", 1).putInt("status_strength", 1));
+        Item.addCreativeGroup("roost_chicken", "Item Chickens", [_this.id]);
         _this.setMaxStack(16);
         _this.setSkin("model/roost_chicken/".concat(stringID, ".png"));
-        _this.products = products.map(function (product) { return typeof product == "number" ? { id: product, data: 0 } : product; });
+        _this.products = products.map(function (product) {
+            switch (typeof product) {
+                case "number":
+                    return { id: product, data: 0 };
+                case "string":
+                    return IDConverter.getIDData(product);
+            }
+            return product;
+        });
         _this.breedableList = [{ mate: _this, baby: _this }];
-        ItemChicken.chickens[_this.id] = true;
+        ItemChicken.chickens.push(_this);
         return _this;
     }
-    ItemChicken.isExists = function (id) {
-        return this.chickens[id] || false;
+    ItemChicken.isChicken = function (id) {
+        return this.chickens.some(function (chicken) { return chicken.id == id; });
+    };
+    ItemChicken.getChickenByIdentifier = function (identifier) {
+        return this.chickens.find(function (chicken) { return chicken.identifier == identifier; });
     };
     ItemChicken.prototype.onNameOverride = function (item, translation, name) {
         if (item.extra) {
@@ -66,8 +79,16 @@ var ItemChicken = /** @class */ (function (_super) {
         }
         return name;
     };
+    ItemChicken.prototype.setEntityIdentifier = function (identifier) {
+        this.identifier = identifier;
+        return this;
+    };
+    ItemChicken.prototype.getEntityIdentifier = function () {
+        return this.identifier;
+    };
     ItemChicken.prototype.setSkin = function (skin) {
         this.skin = skin;
+        return this;
     };
     ItemChicken.prototype.getSkin = function () {
         return this.skin;
@@ -81,23 +102,20 @@ var ItemChicken = /** @class */ (function (_super) {
     ItemChicken.prototype.getBreedableList = function () {
         return this.breedableList;
     };
-    ItemChicken.prototype.getBabies = function (mate) {
-        return this.breedableList.filter(function (family) { return family.mate == mate; }).map(function (family) { return family.baby; });
-    };
     ItemChicken.prototype.getRandomBaby = function (mate) {
-        var families = this.getBabies(mate);
-        if (families.length == 0)
+        if (mate == this)
+            return this;
+        var babies = __spreadArray([this, mate], this.breedableList.filter(function (family) { return family.mate == mate; }).map(function (family) { return family.baby; }), true);
+        if (babies.length == 2)
             return null;
-        if (families.length == 1)
-            return families[0];
-        var maxChance = families.reduce(function (pre, cur) { return Math.max(pre, cur.getTier()); }, 0) + 1;
-        var maxDiceValue = families.reduce(function (pre, cur) { return pre + (maxChance - cur.getTier()); }, 0);
+        var maxChance = babies.reduce(function (pre, cur) { return Math.max(pre, cur.getTier()); }, 0) + 1;
+        var maxDiceValue = babies.reduce(function (pre, cur) { return pre + (maxChance - cur.getTier()); }, 0);
         var diceValue = Math.random() * maxDiceValue | 0;
         var curValue = 0;
-        for (var i = 0; i < families.length; i++) {
-            curValue += maxChance - families[i].getTier();
+        for (var i = 0; i < babies.length; i++) {
+            curValue += maxChance - babies[i].getTier();
             if (diceValue < curValue) {
-                return families[i];
+                return babies[i];
             }
         }
         return null;
@@ -107,6 +125,7 @@ var ItemChicken = /** @class */ (function (_super) {
         parent2.addBreedableList(parent1, this);
         this.parent1 = parent1;
         this.parent2 = parent2;
+        return this;
     };
     ItemChicken.prototype.hasParents = function () {
         return !!this.parent1 && !!this.parent2;
@@ -126,7 +145,7 @@ var ItemChicken = /** @class */ (function (_super) {
     ItemChicken.prototype.getMaxLayTime = function () {
         return this.getMinLayTime() * 2;
     };
-    ItemChicken.chickens = {};
+    ItemChicken.chickens = [];
     return ItemChicken;
 }(ItemCommon));
 var ChickenStack = /** @class */ (function (_super) {
@@ -142,7 +161,7 @@ var ChickenStack = /** @class */ (function (_super) {
         return _this;
     }
     ChickenStack.getChickenStack = function (item) {
-        if (ItemChicken.isExists(item.id)) {
+        if (ItemChicken.isChicken(item.id)) {
             return new ChickenStack(item);
         }
         return null;
@@ -428,16 +447,9 @@ var ItemCatcher = /** @class */ (function (_super) {
         ToolAPI.registerTool(_this.id, { efficiency: 0, damage: 0, durability: _this.maxDamage, level: 0 }, [], _this);
         return _this;
     }
-    ItemCatcher.registerChicken = function (identifier, chicken) {
-        this.chickens[identifier] = chicken;
-    };
-    ItemCatcher.getChickenData = function (identifier) {
-        return this.chickens[identifier] || null;
-    };
     ItemCatcher.prototype.onAttack = function (item, entity, player) {
         var type = Entity.getTypeName(entity);
-        Game.message(type);
-        var chicken = ItemCatcher.getChickenData(type.split("<")[0]);
+        var chicken = ItemChicken.getChickenByIdentifier(type.split("<")[0]);
         if (chicken) {
             //const age = Entity.getAge(entity);
             var pos = Entity.getPosition(entity);
@@ -445,8 +457,8 @@ var ItemCatcher = /** @class */ (function (_super) {
             extra.putInt("status_growth", 1)
                 .putInt("status_gain", 1)
                 .putInt("status_strength", 1);
-            Entity.addVelocity(World.drop(pos.x, pos.y, pos.z, chicken.id, 1, 0, extra), 0, 0.2, 0);
             Entity.remove(entity);
+            Entity.addVelocity(World.drop(pos.x, pos.y, pos.z, chicken.id, 1, 0, extra), 0, 0.2, 0);
             for (var i = 0; i < 20; i++) {
                 Particles.addParticle(EParticleType.REDSTONE, pos.x + Math.random() * 0.6 - 0.3, pos.y + Math.random() * 0.6, pos.z + Math.random() * 0.6 - 0.3, Math.random() * 0.02, Math.random() * 0.2, Math.random() * 0.02);
             }
@@ -454,13 +466,16 @@ var ItemCatcher = /** @class */ (function (_super) {
         }
         return true;
     };
-    ItemCatcher.chickens = {};
     return ItemCatcher;
 }(ItemCommon));
 ItemRegistry.registerItem(new ItemCatcher());
-var vanilla = new ItemChicken("chicken_vanilla", "Vanilla Chicken", [VanillaItemID.feather, VanillaItemID.egg]);
-ItemRegistry.registerItem(vanilla);
-ItemCatcher.registerChicken("minecraft:chicken", vanilla);
+Recipes2.addShaped(ItemID.chicken_catcher, "a:b:c", { a: "egg", b: "stick", c: "feather" });
+var Chicken;
+(function (Chicken) {
+    Chicken.$vanilla = new ItemChicken("chicken_vanilla", "Vanilla Chicken", ["feather", "egg"]);
+    Chicken.$vanilla.setEntityIdentifier("minecraft:chicken");
+    ItemRegistry.registerItem(Chicken.$vanilla);
+})(Chicken || (Chicken = {}));
 var UiRoost = new WindowWithTooltips({
     location: (function () {
         var loc = { x: 0, y: 0, width: 0, height: 0 };
@@ -514,6 +529,11 @@ var TileRoost = /** @class */ (function (_super) {
         delete this.liquidStorage;
     };
     TileRoost.prototype.setupContainer = function () {
+        StorageInterface.setGlobalValidatePolicy(this.container, function (name, id, amount, data) {
+            if (name == "slotChicken")
+                return ItemChicken.isChicken(id);
+            return false;
+        });
     };
     TileRoost.prototype.renderChickenModel = function (show) {
         var _a;
@@ -636,6 +656,7 @@ var BlockRoost = /** @class */ (function (_super) {
 }(BlockBase));
 BlockRegistry.registerBlock(new BlockRoost("chicken_roost", "Roost"));
 VanillaSlots.registerForTile(BlockID.chicken_roost);
+Recipes2.addShaped(BlockID.chicken_roost, "aaa:a_a:bbb", { a: "planks", b: "hay_block" });
 var UiBreeder = new WindowWithTooltips({
     location: (function () {
         var loc = { x: 0, y: 0, width: 0, height: 0 };
@@ -689,6 +710,13 @@ var TileBreeder = /** @class */ (function (_super) {
         delete this.liquidStorage;
     };
     TileBreeder.prototype.setupContainer = function () {
+        StorageInterface.setGlobalValidatePolicy(this.container, function (name, id, amount, data) {
+            if (name == "slotSeed")
+                return TileBreeder.seeds[id];
+            if (name == "slotBase" || name == "slotMate")
+                return ItemChicken.isChicken(id);
+            return false;
+        });
     };
     TileBreeder.prototype.renderModel = function () {
         var mode = this.networkData.getInt("mode");
@@ -787,8 +815,6 @@ var BlockBreeder = /** @class */ (function (_super) {
     function BlockBreeder(stringID, name) {
         var _this = _super.call(this, stringID, "wood") || this;
         _this.addVariation(name, [["roost_plain", 0]], true);
-        //this.setSolid(false);
-        _this.setTranslucency(0);
         _this.createBreederModel();
         _this.registerTileEntity(new TileBreeder());
         return _this;
@@ -828,11 +854,13 @@ var BlockBreeder = /** @class */ (function (_super) {
 }(BlockBase));
 BlockRegistry.registerBlock(new BlockBreeder("chicken_breeder", "Chicken Breeder"));
 VanillaSlots.registerForTile(BlockID.chicken_breeder);
+Recipes2.addShaped(BlockID.chicken_breeder, "aaa:aba:ccc", { a: "planks", b: "wheat_seeds", c: "hay_block" });
+//Recipes2.addShaped(BlockID.chicken_collector, "aba:aca:ada", {a: "planks", b: Chicken.$vanilla.id, c: "hopper", d: "chest"});
 var RV;
 ModAPI.addAPICallback("RecipeViewer", function (api) {
     RV = api;
 });
 ModAPI.registerAPI("RoostAPI", {
     ItemChicken: ItemChicken,
-    ItemCatcher: ItemCatcher
+    Chicken: Chicken
 });
