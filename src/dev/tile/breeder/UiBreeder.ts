@@ -25,7 +25,11 @@ const UiBreeder = new WindowWithTooltips({
 
     elements: {
         buttonClose: {type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4},
-        barProgress: {type: "scale", x: 478, y: 120, bitmap: "roost.bar_breeder", scale: 5.5},
+        barProgress: {type: "scale", x: 478, y: 120, bitmap: "roost.bar_breeder", scale: 5.5, clicker: {
+            onClick: () => {
+                RV?.RecipeTypeRegistry.openRecipePage("chicken_breeder");
+            }
+        }},
         slotSeed: {type: "slot", x: 50, y: 110, size: 100, bitmap: "classic_slot"},
         slotBase: {type: "slot", x: 250, y: 110, size: 100, bitmap: "roost.slot"},
         slotMate: {type: "slot", x: 350, y: 110, size: 100, bitmap: "roost.slot"},

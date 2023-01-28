@@ -1,3 +1,5 @@
 {
-    "enabled": true
+    "enabled": true,
+    "roost_speed": 1,
+    "breeder_speed": 1
 }

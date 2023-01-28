@@ -77,7 +77,13 @@ class WindowWithTooltips {
         this.winMain.setBackgroundColor(Color.TRANSPARENT);
         this.winOvl.setBackgroundColor(Color.TRANSPARENT);
 
-        this.winMain.setInventoryNeeded(true);
+        for(let key in this.content.elements){
+            if(this.content.elements[key].type == "invSlot"){
+                this.winMain.setInventoryNeeded(true);
+                break;
+            }
+        }
+
         this.winMain.setBlockingBackground(true);
         this.winOvl.setTouchable(false);
         this.winOvl.setAsGameOverlay(true);

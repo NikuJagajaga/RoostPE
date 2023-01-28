@@ -13,15 +13,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -32,6 +23,15 @@ var __assign = (this && this.__assign) || function () {
         return t;
     };
     return __assign.apply(this, arguments);
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -46,6 +46,11 @@ IMPORT("EnhancedRecipes");
 var Color = android.graphics.Color;
 var Math_clamp = function (value, min, max) { return Math.min(Math.max(value, min), max); };
 var Math_randomInt = function (min, max) { return min + (Math.random() * (max - min)) | 0; };
+var Cfg = {
+    vanilla_slots: __config__.getBool("vanilla_slots"),
+    roost_speed: __config__.getNumber("roost_speed").intValue(),
+    breeder_speed: __config__.getNumber("breeder_speed").intValue()
+};
 var ItemChicken = /** @class */ (function (_super) {
     __extends(ItemChicken, _super);
     function ItemChicken(stringID, name, products) {
@@ -63,7 +68,7 @@ var ItemChicken = /** @class */ (function (_super) {
             }
             return product;
         });
-        _this.breedableList = [{ mate: _this, baby: _this }];
+        _this.breedableList = [];
         ItemChicken.chickens.push(_this);
         return _this;
     }
@@ -73,11 +78,46 @@ var ItemChicken = /** @class */ (function (_super) {
     ItemChicken.getChickenByIdentifier = function (identifier) {
         return this.chickens.find(function (chicken) { return chicken.identifier == identifier; });
     };
+    ItemChicken.getRoostRecipeListForRV = function () {
+        return this.chickens.map(function (chicken) { return ({
+            input: [{ id: chicken.id, count: 1, data: 0 }],
+            output: chicken.getProducts().map(function (product) { return (__assign(__assign({}, product), { count: 1 })); })
+        }); });
+    };
+    ItemChicken.getBreederRecipeListForRV = function () {
+        return this.chickens.filter(function (chicken) { return chicken.hasParents(); }).map(function (chicken) {
+            var babies = __spreadArray([
+                chicken.parent1,
+                chicken.parent2
+            ], chicken.parent1.getBreedableList().filter(function (family) { return family.mate == chicken.parent2; }).map(function (family) { return family.baby; }), true);
+            var maxChance = babies.reduce(function (max, baby) { return Math.max(max, baby.getTier()); }, 0) + 1;
+            var maxDiceValue = babies.reduce(function (sum, baby) { return sum + (maxChance - baby.getTier()); }, 0);
+            return {
+                input: [
+                    { id: VanillaItemID.wheat_seeds, count: 1, data: 0 },
+                    { id: chicken.parent1.id, count: 1, data: 0, tips: { chance: (maxChance - chicken.parent1.getTier()) / maxDiceValue } },
+                    { id: chicken.parent2.id, count: 1, data: 0, tips: { chance: (maxChance - chicken.parent2.getTier()) / maxDiceValue } }
+                ],
+                output: [
+                    { id: chicken.id, count: 1, data: 0, tips: { chance: (maxChance - chicken.getTier()) / maxDiceValue } }
+                ]
+            };
+        });
+    };
     ItemChicken.prototype.onNameOverride = function (item, translation, name) {
         if (item.extra) {
             return name + "\nGrowth: ".concat(item.extra.getInt("status_growth"), "\nGain: ").concat(item.extra.getInt("status_gain"), "\nStrength: ").concat(item.extra.getInt("status_strength"));
         }
         return name;
+    };
+    ItemChicken.prototype.onItemUse = function (coords, item, block, player) {
+        if (this.identifier && Entity.getSneaking(player)) {
+            var chickenStack = new ChickenStack(item);
+            if (chickenStack.growth == 1 && chickenStack.gain == 1 && chickenStack.strength == 1) {
+                Entity.setCarriedItem(player, item.id, item.count - 1, item.data, item.extra);
+                Commands.exec("/summon ".concat(this.identifier, " ").concat(coords.relative.x, " ").concat(coords.relative.y, " ").concat(coords.relative.z));
+            }
+        }
     };
     ItemChicken.prototype.setEntityIdentifier = function (identifier) {
         this.identifier = identifier;
@@ -108,8 +148,8 @@ var ItemChicken = /** @class */ (function (_super) {
         var babies = __spreadArray([this, mate], this.breedableList.filter(function (family) { return family.mate == mate; }).map(function (family) { return family.baby; }), true);
         if (babies.length == 2)
             return null;
-        var maxChance = babies.reduce(function (pre, cur) { return Math.max(pre, cur.getTier()); }, 0) + 1;
-        var maxDiceValue = babies.reduce(function (pre, cur) { return pre + (maxChance - cur.getTier()); }, 0);
+        var maxChance = babies.reduce(function (max, baby) { return Math.max(max, baby.getTier()); }, 0) + 1;
+        var maxDiceValue = babies.reduce(function (sum, baby) { return sum + (maxChance - baby.getTier()); }, 0);
         var diceValue = Math.random() * maxDiceValue | 0;
         var curValue = 0;
         for (var i = 0; i < babies.length; i++) {
@@ -207,6 +247,11 @@ var ChickenStack = /** @class */ (function (_super) {
         var time = Math_randomInt(this.instance.getMinLayTime(), this.instance.getMaxLayTime());
         time = Math.max(1, (time * (10 - this.growth + 1)) / 10);
         return time;
+    };
+    ChickenStack.prototype.getLayItem = function () {
+        var products = this.instance.getProducts();
+        var item = products[Math.random() * products.length | 0];
+        return __assign(__assign({}, item), { count: this.gain >= 10 ? 3 : this.gain >= 5 ? 2 : 1 });
     };
     ChickenStack.prototype.makeBaby = function (mate) {
         var babyData = this.instance.getRandomBaby(mate.instance);
@@ -342,7 +387,12 @@ var WindowWithTooltips = /** @class */ (function () {
         });
         this.winMain.setBackgroundColor(Color.TRANSPARENT);
         this.winOvl.setBackgroundColor(Color.TRANSPARENT);
-        this.winMain.setInventoryNeeded(true);
+        for (var key in this.content.elements) {
+            if (this.content.elements[key].type == "invSlot") {
+                this.winMain.setInventoryNeeded(true);
+                break;
+            }
+        }
         this.winMain.setBlockingBackground(true);
         this.winOvl.setTouchable(false);
         this.winOvl.setAsGameOverlay(true);
@@ -496,7 +546,11 @@ var UiRoost = new WindowWithTooltips({
         { type: "text", x: 50, y: 290, text: "Inventory", font: { color: Color.BLACK, size: 32 } },
         { type: "bitmap", x: 278, y: 116, bitmap: "roost.bar_roost_bg", scale: 5.5 }
     ],
-    elements: __assign({ buttonClose: { type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4 }, barProgress: { type: "scale", x: 278, y: 116, bitmap: "roost.bar_roost", scale: 5.5 }, slotChicken: { type: "slot", x: 150, y: 110, size: 100, bitmap: "roost.slot" }, slotOutput0: { type: "slot", x: 450, y: 110, size: 100 }, slotOutput1: { type: "slot", x: 550, y: 110, size: 100 }, slotOutput2: { type: "slot", x: 650, y: 110, size: 100 }, slotOutput3: { type: "slot", x: 750, y: 110, size: 100 } }, (function () {
+    elements: __assign({ buttonClose: { type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4 }, barProgress: { type: "scale", x: 278, y: 116, bitmap: "roost.bar_roost", scale: 5.5, clicker: {
+                onClick: function () {
+                    RV === null || RV === void 0 ? void 0 : RV.RecipeTypeRegistry.openRecipePage("chicken_roost");
+                }
+            } }, slotChicken: { type: "slot", x: 150, y: 110, size: 100, bitmap: "roost.slot" }, slotOutput0: { type: "slot", x: 450, y: 110, size: 100 }, slotOutput1: { type: "slot", x: 550, y: 110, size: 100 }, slotOutput2: { type: "slot", x: 650, y: 110, size: 100 }, slotOutput3: { type: "slot", x: 750, y: 110, size: 100 } }, (function () {
         var elems = {};
         var x = 0;
         var y = 0;
@@ -566,8 +620,8 @@ var TileRoost = /** @class */ (function (_super) {
                 this.data.layTime = chickenStack.getLayTime();
             }
             else {
-                this.data.progress += slotChicken.count;
-                if (this.data.progress >= this.data.layTime) {
+                this.data.progress += slotChicken.count * Cfg.roost_speed;
+                if (this.data.progress >= this.data.layTime && this.putResult(chickenStack.getLayItem())) {
                     this.data.progress = 0;
                     this.data.layTime = 0;
                 }
@@ -578,6 +632,7 @@ var TileRoost = /** @class */ (function (_super) {
             this.data.progress = 0;
             this.data.layTime = 0;
         }
+        StorageInterface.checkHoppers(this);
         this.container.setScale("barProgress", this.data.layTime > 0 ? this.data.progress / this.data.layTime : 0);
         this.networkData.sendChanges();
         this.container.sendChanges();
@@ -589,9 +644,21 @@ var TileRoost = /** @class */ (function (_super) {
             if (slot.id == 0 || slot.id == item.id && slot.data == item.data && slot.count + item.count <= Item.getMaxStack(item.id)) {
                 slot.id = item.id;
                 slot.data = item.data;
-                slot.extra = item.extra;
                 slot.count += item.count;
                 slot.markDirty();
+                return true;
+            }
+        }
+        return false;
+    };
+    TileRoost.prototype.onItemUse = function (coords, item, player) {
+        if (!Entity.getSneaking(player) && ItemChicken.isChicken(item.id)) {
+            var slotChicken = this.container.getSlot("slotChicken");
+            if (slotChicken.id == 0) {
+                Entity.setCarriedItem(player, 0, 0, 0);
+                slotChicken.setSlot(item.id, item.count, item.data, item.extra);
+                slotChicken.markDirty();
+                this.container.sendChanges();
                 return true;
             }
         }
@@ -602,6 +669,15 @@ var TileRoost = /** @class */ (function (_super) {
     ], TileRoost.prototype, "renderChickenModel", null);
     return TileRoost;
 }(TileEntityBase));
+StorageInterface.createInterface(BlockID.chicken_roost, {
+    slots: {
+        slotChicken: { input: true, isValid: function (item) { return ItemChicken.isChicken(item.id); } },
+        slotOutput0: { output: true },
+        slotOutput1: { output: true },
+        slotOutput2: { output: true },
+        slotOutput3: { output: true }
+    }
+});
 var BlockRoost = /** @class */ (function (_super) {
     __extends(BlockRoost, _super);
     function BlockRoost(stringID, name) {
@@ -655,7 +731,7 @@ var BlockRoost = /** @class */ (function (_super) {
     return BlockRoost;
 }(BlockBase));
 BlockRegistry.registerBlock(new BlockRoost("chicken_roost", "Roost"));
-VanillaSlots.registerForTile(BlockID.chicken_roost);
+Cfg.vanilla_slots && VanillaSlots.registerForTile(BlockID.chicken_roost);
 Recipes2.addShaped(BlockID.chicken_roost, "aaa:a_a:bbb", { a: "planks", b: "hay_block" });
 var UiBreeder = new WindowWithTooltips({
     location: (function () {
@@ -678,7 +754,11 @@ var UiBreeder = new WindowWithTooltips({
         { type: "bitmap", x: 172, y: 130, bitmap: "roost.plus", scale: 5.5 },
         { type: "bitmap", x: 478, y: 120, bitmap: "roost.bar_breeder_bg", scale: 5.5 }
     ],
-    elements: __assign({ buttonClose: { type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4 }, barProgress: { type: "scale", x: 478, y: 120, bitmap: "roost.bar_breeder", scale: 5.5 }, slotSeed: { type: "slot", x: 50, y: 110, size: 100, bitmap: "classic_slot" }, slotBase: { type: "slot", x: 250, y: 110, size: 100, bitmap: "roost.slot" }, slotMate: { type: "slot", x: 350, y: 110, size: 100, bitmap: "roost.slot" }, slotOutput0: { type: "slot", x: 650, y: 110, size: 100 }, slotOutput1: { type: "slot", x: 750, y: 110, size: 100 }, slotOutput2: { type: "slot", x: 850, y: 110, size: 100 } }, (function () {
+    elements: __assign({ buttonClose: { type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4 }, barProgress: { type: "scale", x: 478, y: 120, bitmap: "roost.bar_breeder", scale: 5.5, clicker: {
+                onClick: function () {
+                    RV === null || RV === void 0 ? void 0 : RV.RecipeTypeRegistry.openRecipePage("chicken_breeder");
+                }
+            } }, slotSeed: { type: "slot", x: 50, y: 110, size: 100, bitmap: "classic_slot" }, slotBase: { type: "slot", x: 250, y: 110, size: 100, bitmap: "roost.slot" }, slotMate: { type: "slot", x: 350, y: 110, size: 100, bitmap: "roost.slot" }, slotOutput0: { type: "slot", x: 650, y: 110, size: 100 }, slotOutput1: { type: "slot", x: 750, y: 110, size: 100 }, slotOutput2: { type: "slot", x: 850, y: 110, size: 100 } }, (function () {
         var elems = {};
         var x = 0;
         var y = 0;
@@ -751,7 +831,7 @@ var TileBreeder = /** @class */ (function (_super) {
                     this.data.layTime = Math.max(baseStack.getLayTime(), mateStack.getLayTime());
                 }
                 else {
-                    this.data.progress += Math.min(slotBase.count, slotMate.count);
+                    this.data.progress += Math.min(slotBase.count, slotMate.count) * Cfg.breeder_speed;
                     if (this.data.progress >= this.data.layTime) {
                         var babyStack = baseStack.makeBaby(mateStack);
                         if (babyStack) {
@@ -779,6 +859,7 @@ var TileBreeder = /** @class */ (function (_super) {
             this.data.progress = 0;
             this.data.layTime = 0;
         }
+        StorageInterface.checkHoppers(this);
         this.networkData.putInt("mode", mode);
         this.container.setScale("barProgress", this.data.layTime > 0 ? this.data.progress / this.data.layTime : 0);
         this.networkData.sendChanges();
@@ -810,6 +891,16 @@ var TileBreeder = /** @class */ (function (_super) {
     ], TileBreeder.prototype, "renderModel", null);
     return TileBreeder;
 }(TileEntityBase));
+StorageInterface.createInterface(BlockID.chicken_breeder, {
+    slots: {
+        slotSeed: { input: true, isValid: function (item) { return TileBreeder.seeds[item.id]; } },
+        slotBase: { input: true, isValid: function (item) { return ItemChicken.isChicken(item.id); } },
+        slotMate: { input: true, isValid: function (item) { return ItemChicken.isChicken(item.id); } },
+        slotOutput0: { output: true },
+        slotOutput1: { output: true },
+        slotOutput2: { output: true }
+    }
+});
 var BlockBreeder = /** @class */ (function (_super) {
     __extends(BlockBreeder, _super);
     function BlockBreeder(stringID, name) {
@@ -853,12 +944,239 @@ var BlockBreeder = /** @class */ (function (_super) {
     return BlockBreeder;
 }(BlockBase));
 BlockRegistry.registerBlock(new BlockBreeder("chicken_breeder", "Chicken Breeder"));
-VanillaSlots.registerForTile(BlockID.chicken_breeder);
+Cfg.vanilla_slots && VanillaSlots.registerForTile(BlockID.chicken_breeder);
 Recipes2.addShaped(BlockID.chicken_breeder, "aaa:aba:ccc", { a: "planks", b: "wheat_seeds", c: "hay_block" });
-//Recipes2.addShaped(BlockID.chicken_collector, "aba:aca:ada", {a: "planks", b: Chicken.$vanilla.id, c: "hopper", d: "chest"});
+var UiCollector = new WindowWithTooltips({
+    location: { x: 200, y: 50, width: 600, height: 300 },
+    params: { slot: "classic_slot" },
+    drawing: [
+        { type: "frame", x: 0, y: 0, width: 1000, height: 500, bitmap: "classic_frame_bg_light", scale: 4 },
+        { type: "text", x: 50, y: 60, text: "Roost Collector", font: { color: Color.BLACK, size: 32 } }
+    ],
+    elements: __assign({ buttonClose: { type: "closeButton", x: 928, y: 12, bitmap: "classic_close_button", bitmap2: "classic_close_button_down", scale: 4 }, buttonTake: { type: "button", x: 500 - 96, y: 400, bitmap: "_craft_button_up", bitmap2: "_craft_button_down", scale: 4, clicker: {
+                onClick: function (position, container) {
+                    container.sendEvent("takeAll", Player.get() + "");
+                }
+            } }, textTake: { type: "text", x: 500, y: 410, z: 1, font: { size: 32, color: Color.WHITE, shadow: 0.5, align: UI.Font.ALIGN_CENTER }, text: "Take All" } }, (function () {
+        var elems = {};
+        var x = 0;
+        var y = 0;
+        for (var i = 0; i < 27; i++) {
+            x = 50 + (i % 9) * 100;
+            y = 70 + (i / 9 | 0) * 100;
+            elems["slot" + i] = { type: "slot", x: x, y: y, z: 1, size: 100 };
+        }
+        return elems;
+    })())
+});
+var TileCollector = /** @class */ (function (_super) {
+    __extends(TileCollector, _super);
+    function TileCollector() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.searchOffset = 0;
+        return _this;
+    }
+    TileCollector.prototype.getScreenByName = function (screenName) {
+        return UiCollector.getWindow();
+    };
+    TileCollector.prototype.onInit = function () {
+        this.setupContainer();
+        delete this.liquidStorage;
+    };
+    TileCollector.prototype.setupContainer = function () {
+        StorageInterface.setGlobalValidatePolicy(this.container, function () { return true; });
+    };
+    TileCollector.prototype.getNextCoordsList = function () {
+        var coordsList = [];
+        for (var x = -4; x <= 4; x++) {
+            coordsList.push({
+                x: this.x + x,
+                y: this.y + (this.searchOffset / 9 | 0),
+                z: this.z + (this.searchOffset % 9 - 4)
+            });
+        }
+        this.searchOffset++;
+        this.searchOffset %= 27;
+        return coordsList;
+    };
+    TileCollector.prototype.onTick = function () {
+        var _this = this;
+        if ((World.getThreadTime() & 3) == 0) {
+            this.getNextCoordsList().forEach(function (coords) {
+                if (_this.blockSource.getBlockId(coords.x, coords.y, coords.z) == BlockID.chicken_roost) {
+                    var storage = StorageInterface.getStorage(_this.blockSource, coords.x, coords.y, coords.z);
+                    if (storage) {
+                        StorageInterface.extractItemsFromStorage(StorageInterface.getInterface(_this), storage, -1);
+                    }
+                }
+            });
+            this.container.sendChanges();
+        }
+    };
+    TileCollector.prototype.takeAll = function (data) {
+        StorageInterface.extractItemsFromStorage(new PlayerInventoryInterface(+data), StorageInterface.getInterface(this), -1);
+        this.container.sendChanges();
+    };
+    __decorate([
+        BlockEngine.Decorators.ContainerEvent(Side.Server)
+    ], TileCollector.prototype, "takeAll", null);
+    return TileCollector;
+}(TileEntityBase));
+StorageInterface.createInterface(BlockID.roost_collector, {
+    slots: (function () {
+        var slots = {};
+        for (var i = 0; i < 27; i++) {
+            slots["slot" + i] = { input: true, output: true };
+        }
+        return slots;
+    })()
+});
+var PlayerInventoryInterface = /** @class */ (function () {
+    function PlayerInventoryInterface(playerUid) {
+        this.container = null;
+        this.isNativeContainer = false;
+        this.player = new PlayerEntity(playerUid);
+    }
+    PlayerInventoryInterface.prototype.getSlot = function (index) {
+        return this.player.getInventorySlot(index);
+    };
+    PlayerInventoryInterface.prototype.setSlot = function (index, id, count, data, extra) {
+        this.player.setInventorySlot(index, id, count, data, extra);
+    };
+    PlayerInventoryInterface.prototype.getContainerSlots = function () {
+        var slots = [];
+        for (var i = 0; i < 36; i++) {
+            slots.push(i);
+        }
+        return slots;
+    };
+    PlayerInventoryInterface.prototype.getInputSlots = function (side) {
+        return this.getContainerSlots();
+    };
+    PlayerInventoryInterface.prototype.getOutputSlots = function (side) {
+        return this.getContainerSlots();
+    };
+    PlayerInventoryInterface.prototype.getReceivingItemCount = function (item, side) {
+        return 0;
+    };
+    PlayerInventoryInterface.prototype.addItemToSlot = function (index, item, maxCount) {
+        var slot = this.getSlot(index);
+        var added = StorageInterface.addItemToSlot(item, slot, maxCount);
+        added > 0 && this.setSlot(index, slot.id, slot.count, slot.data, slot.extra);
+        return added;
+    };
+    PlayerInventoryInterface.prototype.addItem = function (item, side, maxCount) {
+        var slots = this.getInputSlots(side);
+        var count = 0;
+        for (var i = 0; i < slots.length; i++) {
+            count += this.addItemToSlot(i, item, maxCount);
+            if (item.count == 0 || count >= maxCount) {
+                break;
+            }
+        }
+        return count;
+    };
+    PlayerInventoryInterface.prototype.clearContainer = function () {
+        var slots = this.getContainerSlots();
+        for (var i = 0; i < slots.length; i++) {
+            this.setSlot(slots[i], 0, 0, 0);
+        }
+    };
+    return PlayerInventoryInterface;
+}());
+var BlockCollector = /** @class */ (function (_super) {
+    __extends(BlockCollector, _super);
+    function BlockCollector(stringID, name) {
+        var _this = _super.call(this, stringID, "wood") || this;
+        _this.addVariation(name, [["roost_plain", 0], ["roost_plain", 0], ["roost_slat", 0]], true);
+        _this.registerTileEntity(new TileCollector());
+        return _this;
+    }
+    return BlockCollector;
+}(BlockBase));
+BlockRegistry.registerBlock(new BlockCollector("roost_collector", "Roost Collector"));
+Cfg.vanilla_slots && VanillaSlots.registerForTile(BlockID.roost_collector);
+Recipes2.addShaped(BlockID.roost_collector, "aba:aca:ada", { a: "planks", b: Chicken.$vanilla.id, c: "hopper", d: "chest" });
 var RV;
 ModAPI.addAPICallback("RecipeViewer", function (api) {
     RV = api;
+    var RoostRecipe = /** @class */ (function (_super) {
+        __extends(RoostRecipe, _super);
+        function RoostRecipe() {
+            return _super.call(this, "Roost", BlockID.chicken_roost, {
+                drawing: [
+                    { type: "bitmap", x: 278, y: 116, bitmap: "roost.bar_roost", scale: 5.5 }
+                ],
+                elements: {
+                    input0: { x: 150, y: 110, size: 100 },
+                    output0: { x: 450, y: 110, size: 100 },
+                    output1: { x: 550, y: 110, size: 100 },
+                    output2: { x: 650, y: 110, size: 100 },
+                    output3: { x: 750, y: 110, size: 100 },
+                    textInfo: { type: "text", x: 150, y: 240, font: { size: 32, color: Color.WHITE, shadow: 0.5 }, multiline: true },
+                    textTips1: { type: "text", x: 150, y: 380, font: { size: 24, color: Color.LTGRAY, shadow: 0.5 }, multiline: true, text: [
+                            "[Lay Time Multiplier]",
+                            "Growth _1: 100%",
+                            "Growth _2: _90%",
+                            "Growth 10: _10%"
+                        ].join("\n").replace(/_/g, "  ") },
+                    textTips2: { type: "text", x: 550, y: 380, font: { size: 24, color: Color.LTGRAY, shadow: 0.5 }, multiline: true, text: [
+                            "[Lay Count]",
+                            "Gain 1-4: 1",
+                            "Gain 5-9: 2",
+                            "Gain _10: 3"
+                        ].join("\n").replace(/_/g, "  ") }
+                }
+            }) || this;
+        }
+        RoostRecipe.prototype.getAllList = function () {
+            return ItemChicken.getRoostRecipeListForRV();
+        };
+        RoostRecipe.prototype.onOpen = function (elements, recipe) {
+            var chicken = ItemRegistry.getInstanceOf(recipe.input[0].id);
+            if (!chicken) {
+                elements.get("textInfo").setBinding("text", "");
+                return;
+            }
+            var info = [
+                "Tier: " + chicken.getTier(),
+                "Lay Time: " + chicken.getMinLayTime() + " - " + chicken.getMaxLayTime() + " tick"
+            ];
+            elements.get("textInfo").setBinding("text", info.join("\n"));
+        };
+        return RoostRecipe;
+    }(api.RecipeType));
+    var BreederRecipe = /** @class */ (function (_super) {
+        __extends(BreederRecipe, _super);
+        function BreederRecipe() {
+            return _super.call(this, "Crossbreeding", BlockID.chicken_breeder, {
+                drawing: [
+                    { type: "bitmap", x: 172, y: 130, bitmap: "roost.plus", scale: 5.5 },
+                    { type: "bitmap", x: 478, y: 120, bitmap: "roost.bar_breeder", scale: 5.5 }
+                ],
+                elements: {
+                    input0: { x: 50, y: 110, size: 100 },
+                    input1: { x: 250, y: 110, size: 100 },
+                    input2: { x: 350, y: 110, size: 100 },
+                    output0: { x: 650, y: 110, size: 100 },
+                    output1: { x: 750, y: 110, size: 100 },
+                    output2: { x: 850, y: 110, size: 100 }
+                }
+            }) || this;
+        }
+        BreederRecipe.prototype.getAllList = function () {
+            return ItemChicken.getBreederRecipeListForRV();
+        };
+        BreederRecipe.prototype.slotTooltip = function (name, item, tips) {
+            if (tips === null || tips === void 0 ? void 0 : tips.chance) {
+                return name + "\n(" + (tips.chance * 100).toFixed(1) + "%)";
+            }
+            return name;
+        };
+        return BreederRecipe;
+    }(api.RecipeType));
+    api.RecipeTypeRegistry.register("chicken_roost", new RoostRecipe());
+    api.RecipeTypeRegistry.register("chicken_breeder", new BreederRecipe());
 });
 ModAPI.registerAPI("RoostAPI", {
     ItemChicken: ItemChicken,

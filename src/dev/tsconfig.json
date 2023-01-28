@@ -8,8 +8,7 @@
         "skipLibCheck": true,
         "outFile": "../main.js",
         "newLine": "LF",
-        "experimentalDecorators": true,
-        "declaration": true
+        "experimentalDecorators": true
     },
     "include": [
 

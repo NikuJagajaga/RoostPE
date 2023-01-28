@@ -72,7 +72,7 @@ class TileBreeder extends TileEntityBase {
                     this.data.layTime = Math.max(baseStack.getLayTime(), mateStack.getLayTime());
                 }
                 else{
-                    this.data.progress += Math.min(slotBase.count, slotMate.count);
+                    this.data.progress += Math.min(slotBase.count, slotMate.count) * Cfg.breeder_speed;
                     if(this.data.progress >= this.data.layTime){
                         const babyStack = baseStack.makeBaby(mateStack);
                         if(babyStack){
@@ -104,6 +104,8 @@ class TileBreeder extends TileEntityBase {
             this.data.layTime = 0;
         }
 
+        StorageInterface.checkHoppers(this);
+
         this.networkData.putInt("mode", mode);
         this.container.setScale("barProgress", this.data.layTime > 0 ? this.data.progress / this.data.layTime : 0);
 
@@ -129,3 +131,15 @@ class TileBreeder extends TileEntityBase {
     }
 
 }
+
+
+StorageInterface.createInterface(BlockID.chicken_breeder, {
+    slots: {
+        slotSeed: {input: true, isValid: item => TileBreeder.seeds[item.id]},
+        slotBase: {input: true, isValid: item => ItemChicken.isChicken(item.id)},
+        slotMate: {input: true, isValid: item => ItemChicken.isChicken(item.id)},
+        slotOutput0: {output: true},
+        slotOutput1: {output: true},
+        slotOutput2: {output: true}
+    }
+});

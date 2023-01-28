@@ -3,6 +3,24 @@
         "enabled": {
             "name": {"en": "Enable mod"},
             "index": 0
+        },
+        "vanilla_slots": {
+            "name": {"en": "Enable VanillaSlots"},
+            "index": 1
+        },
+        "roost_speed": {
+            "name": {"en": "Roost Speed Multiplier"},
+            "index": 2,
+            "type": "SeekBar",
+            "min": 1,
+            "max": 100
+        },
+        "breeder_speed": {
+            "name": {"en": "Roost Speed Multiplier"},
+            "index": 3,
+            "type": "SeekBar",
+            "min": 1,
+            "max": 100
         }
     }
 }

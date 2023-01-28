@@ -46,6 +46,12 @@ class ChickenStack extends ItemStack {
         return time;
     }
 
+    getLayItem(): ItemInstance {
+        const products = this.instance.getProducts();
+        const item = products[Math.random() * products.length | 0];
+        return {...item, count: this.gain >= 10 ? 3 : this.gain >= 5 ? 2 : 1};
+    }
+
     makeBaby(mate: ChickenStack): Nullable<ChickenStack> {
 
         const babyData = this.instance.getRandomBaby(mate.instance);

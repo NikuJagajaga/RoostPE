@@ -10,6 +10,35 @@ class ItemChicken extends ItemCommon implements ItemBehavior {
         return this.chickens.find(chicken => chicken.identifier == identifier);
     }
 
+    static getRoostRecipeListForRV(): RecipePattern[] {
+        return this.chickens.map(chicken => ({
+            input: [{id: chicken.id, count: 1, data: 0}],
+            output: chicken.getProducts().map(product => ({...product, count: 1}))
+        }));
+    }
+
+    static getBreederRecipeListForRV(): RecipePattern[] {
+        return this.chickens.filter(chicken => chicken.hasParents()).map(chicken => {
+            const babies = [
+                chicken.parent1,
+                chicken.parent2,
+                ...chicken.parent1.getBreedableList().filter(family => family.mate == chicken.parent2).map(family => family.baby)
+            ];
+            const maxChance = babies.reduce((max, baby) => Math.max(max, baby.getTier()), 0) + 1;
+            const maxDiceValue = babies.reduce((sum, baby) => sum + (maxChance - baby.getTier()), 0);
+            return {
+                input: [
+                    {id: VanillaItemID.wheat_seeds, count: 1, data: 0},
+                    {id: chicken.parent1.id, count: 1, data: 0, tips: {chance: (maxChance - chicken.parent1.getTier()) / maxDiceValue}},
+                    {id: chicken.parent2.id, count: 1, data: 0, tips: {chance: (maxChance - chicken.parent2.getTier()) / maxDiceValue}}
+                ],
+                output: [
+                    {id: chicken.id, count: 1, data: 0, tips: {chance: (maxChance - chicken.getTier()) / maxDiceValue}}
+                ]
+            };
+        });
+    }
+
 
     identifier: string;
     private skin: string;
@@ -33,7 +62,7 @@ class ItemChicken extends ItemCommon implements ItemBehavior {
             }
             return product;
         });
-        this.breedableList = [{mate: this, baby: this}];
+        this.breedableList = [];
         ItemChicken.chickens.push(this);
     }
 
@@ -42,6 +71,16 @@ class ItemChicken extends ItemCommon implements ItemBehavior {
             return name + `\nGrowth: ${item.extra.getInt("status_growth")}\nGain: ${item.extra.getInt("status_gain")}\nStrength: ${item.extra.getInt("status_strength")}`;
         }
         return name;
+    }
+
+    onItemUse(coords: Callback.ItemUseCoordinates, item: ItemStack, block: Tile, player: number): void {
+        if(this.identifier && Entity.getSneaking(player)){
+            const chickenStack = new ChickenStack(item);
+            if(chickenStack.growth == 1 && chickenStack.gain == 1 && chickenStack.strength == 1){
+                Entity.setCarriedItem(player, item.id, item.count - 1, item.data, item.extra);
+                Commands.exec(`/summon ${this.identifier} ${coords.relative.x} ${coords.relative.y} ${coords.relative.z}`);
+            }
+        }
     }
 
     setEntityIdentifier(identifier: string): ItemChicken {
@@ -80,8 +119,8 @@ class ItemChicken extends ItemCommon implements ItemBehavior {
 
         if(babies.length == 2) return null;
 
-        const maxChance = babies.reduce((pre, cur) => Math.max(pre, cur.getTier()), 0) + 1;
-        const maxDiceValue = babies.reduce((pre, cur) => pre + (maxChance - cur.getTier()), 0);
+        const maxChance = babies.reduce((max, baby) => Math.max(max, baby.getTier()), 0) + 1;
+        const maxDiceValue = babies.reduce((sum, baby) => sum + (maxChance - baby.getTier()), 0);
         const diceValue = Math.random() * maxDiceValue | 0;
         let curValue = 0;
 

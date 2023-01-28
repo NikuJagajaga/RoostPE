@@ -5,6 +5,7 @@ declare class ItemChicken extends ItemCommon implements ItemBehavior {
     private static chickens;
     static isChicken(id: number): boolean;
     static getChickenByIdentifier(identifier: string): ItemChicken;
+    static getRoostRecipeListForRV(): RecipePattern[];
     identifier: string;
     private skin;
     private products;
@@ -123,5 +124,10 @@ declare class BlockBreeder extends BlockBase {
     static models: [ICRender.Model, ICRender.Model, ICRender.Model];
     constructor(stringID: string, name: string);
     private createBreederModel;
+}
+declare class TileCollector extends TileEntityBase {
+}
+declare class BlockCollector extends BlockBase {
+    constructor(stringID: string, name: string);
 }
 declare var RV: RecipeViewerAPI;

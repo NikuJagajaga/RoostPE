@@ -64,9 +64,8 @@ class TileRoost extends TileEntityBase {
                 this.data.layTime = chickenStack.getLayTime();
             }
             else{
-                this.data.progress += slotChicken.count;
-                if(this.data.progress >= this.data.layTime){
-
+                this.data.progress += slotChicken.count * Cfg.roost_speed;
+                if(this.data.progress >= this.data.layTime && this.putResult(chickenStack.getLayItem())){
                     this.data.progress = 0;
                     this.data.layTime = 0;
                 }
@@ -80,6 +79,8 @@ class TileRoost extends TileEntityBase {
             this.data.layTime = 0;
 
         }
+
+        StorageInterface.checkHoppers(this);
 
         this.container.setScale("barProgress", this.data.layTime > 0 ? this.data.progress / this.data.layTime : 0);
 
@@ -95,7 +96,6 @@ class TileRoost extends TileEntityBase {
             if(slot.id == 0 || slot.id == item.id && slot.data == item.data && slot.count + item.count <= Item.getMaxStack(item.id)){
                 slot.id = item.id;
                 slot.data = item.data;
-                slot.extra = item.extra;
                 slot.count += item.count;
                 slot.markDirty();
                 return true;
@@ -104,4 +104,29 @@ class TileRoost extends TileEntityBase {
         return false;
     }
 
+    onItemUse(coords: Callback.ItemUseCoordinates, item: ItemStack, player: number): boolean {
+        if(!Entity.getSneaking(player) && ItemChicken.isChicken(item.id)){
+            const slotChicken = this.container.getSlot("slotChicken");
+            if(slotChicken.id == 0){
+                Entity.setCarriedItem(player, 0, 0, 0);
+                slotChicken.setSlot(item.id, item.count, item.data, item.extra);
+                slotChicken.markDirty();
+                this.container.sendChanges();
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
+
+
+StorageInterface.createInterface(BlockID.chicken_roost, {
+    slots: {
+        slotChicken: {input: true, isValid: item => ItemChicken.isChicken(item.id)},
+        slotOutput0: {output: true},
+        slotOutput1: {output: true},
+        slotOutput2: {output: true},
+        slotOutput3: {output: true}
+    }
+});

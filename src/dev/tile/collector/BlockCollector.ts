@@ -9,6 +9,6 @@ class BlockCollector extends BlockBase {
 }
 
 
-BlockRegistry.registerBlock(new BlockCollector("chicken_collector", "Chicken Collector"));
-VanillaSlots.registerForTile(BlockID.chicken_collector);
-Recipes2.addShaped(BlockID.chicken_collector, "aba:aca:ada", {a: "planks", b: Chicken.$vanilla.id, c: "hopper", d: "chest"});
+BlockRegistry.registerBlock(new BlockCollector("roost_collector", "Roost Collector"));
+Cfg.vanilla_slots && VanillaSlots.registerForTile(BlockID.roost_collector);
+Recipes2.addShaped(BlockID.roost_collector, "aba:aca:ada", {a: "planks", b: Chicken.$vanilla.id, c: "hopper", d: "chest"});

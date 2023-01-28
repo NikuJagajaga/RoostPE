@@ -41,5 +41,5 @@ class BlockBreeder extends BlockBase {
 
 
 BlockRegistry.registerBlock(new BlockBreeder("chicken_breeder", "Chicken Breeder"));
-VanillaSlots.registerForTile(BlockID.chicken_breeder);
+Cfg.vanilla_slots && VanillaSlots.registerForTile(BlockID.chicken_breeder);
 Recipes2.addShaped(BlockID.chicken_breeder, "aaa:aba:ccc", {a: "planks", b: "wheat_seeds", c: "hay_block"});

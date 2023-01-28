@@ -51,5 +51,5 @@ class BlockRoost extends BlockBase {
 
 
 BlockRegistry.registerBlock(new BlockRoost("chicken_roost", "Roost"));
-VanillaSlots.registerForTile(BlockID.chicken_roost);
+Cfg.vanilla_slots && VanillaSlots.registerForTile(BlockID.chicken_roost);
 Recipes2.addShaped(BlockID.chicken_roost, "aaa:a_a:bbb", {a: "planks", b: "hay_block"});
