@@ -1,5 +1,6 @@
 {
     "enabled": true,
+    "vanilla_slots": true,
     "roost_speed": 1,
     "breeder_speed": 1
 }
